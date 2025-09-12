@@ -1,3 +1,4 @@
+import os
 import telebot
 import requests
 import numpy as np
@@ -5,14 +6,16 @@ import time
 import threading
 from telebot import types
 
-# 🔑 Токен от BotFather
-TELEGRAM_TOKEN = "8250034607:AAEWwZMF4awfu3jykjOpqXcuH32eYj562mk"
+# 🔑 Токен
+# 1. На Render укажи TELEGRAM_TOKEN в переменных окружения.
+# 2. Локально бот возьмёт токен, прописанный вторым аргументом.
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8250034607:AAEWwZMF4awfu3jykjOpqXcuH32eYj562mk")
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 # ========= ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =========
-CACHE = []          # сюда будем складывать обработанные монеты
-LAST_UPDATE = 0     # время последнего обновления кэша
-LOCK = threading.Lock()  # защита кеша от одновременного доступа
+CACHE = []
+LAST_UPDATE = 0
+LOCK = threading.Lock()
 
 # ========= ФУНКЦИИ =========
 
@@ -87,7 +90,6 @@ def update_cache():
             continue
 
         try:
-            # 1-часовые свечи
             url = "https://api.binance.com/api/v3/klines"
             params = {"symbol": symbol, "interval": "1h", "limit": 30}
             data = safe_request(url, params)
@@ -192,14 +194,11 @@ def interesting_message(message):
 if __name__ == "__main__":
     print("🚀 Бот запущен...")
 
-    # Первое обновление кеша синхронно
-    update_cache()
+    update_cache()  # первое обновление кеша
 
-    # Фоновый поток для постоянного анализа рынка
     updater_thread = threading.Thread(target=cache_updater, daemon=True)
     updater_thread.start()
 
-    # Основной цикл с переподключением для стабильной работы Telegram
     while True:
         try:
             bot.infinity_polling(timeout=10, long_polling_timeout=5)
